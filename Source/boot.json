@@ -1,0 +1,15 @@
+{
+    "name": "DoL状态美化",
+    "nickName": "",
+    "version": "1.0.0",
+    "styleFileList": ["main.css"],
+    "scriptFileList": ["main.js"],
+    "tweeFileList": [],
+    "imgFileList": [],
+    "dependenceInfo": [
+        {
+            "modName": "ModLoader",
+            "version": "^2.31.2"
+        }
+    ]
+}

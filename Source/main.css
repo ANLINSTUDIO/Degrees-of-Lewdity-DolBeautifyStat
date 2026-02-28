@@ -1,0 +1,32 @@
+/* 社交声誉优化 */
+#faction-reputations {
+    grid-template-columns: unset
+}
+
+
+/* 展开状态框缓动 */
+.meter div {
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+/* 折叠状态框取消底部dot */
+mouse.tooltip-small, mouse.tooltip-centertop {
+    border-bottom: 0;
+}
+
+/* 修改stat */
+.stat {
+    transition: width 0.3s ease;
+    width: 1.5em;
+    background: var(--850);
+}
+
+/* 配置stat底部状态条 */
+.stat .meter {
+    z-index: 0;
+    height: 2px;
+}
+.stat .meter div {
+    height: 2px;
+}
