@@ -1,18 +1,17 @@
-/* 全局动态 */
-.BS-show {
-    opacity: 1;
-}
-.BS-hide {
-    opacity: 0;
-}
-
-
-/* 社交声誉优化 */
+/* === 优化原版CSS =============================== */
+/* 社交声誉优化：让警察局不超出避免挤开 */
 #faction-reputations {
     grid-template-columns: unset
 }
+/* 社交农场优化：让四个排在一行 */
+#secondary-npcs .relation-box, #farm-status .relation-box {
+    min-width: 150px;
+    flex: 0 1 24%;
+}
 
-/* 头像 */
+
+
+/* === 头像 =============================== */
 #story {
     padding-bottom: 100px;
 }
@@ -33,8 +32,16 @@
 }
 
 
-/* 浮动 characteristic-box */
-.characteristics-display-bs {
+
+/* === 浮动弹窗 =============================== */
+/* 全局动态 */
+.BS-show {
+    opacity: 1;
+}
+.BS-hide {
+    opacity: 0;
+}
+.display-bs {
     position: fixed;
     right: 10px;
     top: 20px;
@@ -43,30 +50,31 @@
     z-index: 1001;  /* 高于成就 */
     transition: opacity 0.8s ease;
 }
-
-.characteristics-display-bs * {
+.display-bs * {
     transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
-.characteristic-box-bs {
+.box-bs {
     background-color: var(--850);
+    transition: opacity 0.8s ease;
 }
-
-.characteristic-box-bs > .characteristic-box > .meter {
+.box-bs .meter {
     z-index: 0;
 }
+.box-bs-stretch {
+    min-width: stretch !important;
+}
 
 
+
+/* === 状态美化 =============================== */
 /* 状态缓动 */
 .meter div {
     transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.8s ease;
 }
-
 /* 折叠状态框取消底部dot */
 mouse.tooltip-small, mouse.tooltip-centertop {
     border-bottom: 0;
 }
-
 /* 配置stat底部状态条 */
 .stat .meter {
     z-index: 0;

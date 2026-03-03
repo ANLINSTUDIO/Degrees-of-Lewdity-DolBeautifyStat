@@ -1,40 +1,72 @@
 window.StateBeautifyMod = {}
 
+// === 数值存储 =================================
+
 StateBeautifyMod.LastState = new Map()
+StateBeautifyMod.LastRelations = {};
+StateBeautifyMod.LastCharacteristics = {};
 
-StateBeautifyMod.LastSkills = {
-    Skulduggery: null,
-    Dancing: null,
-    Swimming: null,
-    Athletics: null,
-    Tending: null,
-    Housekeeping: null,
-    Photography: null,
-}
 
-StateBeautifyMod.LastCorruption = null
-
-StateBeautifyMod.LastSchoolPerformance = {
-    Science: null,
-    Maths: null,
-    English: null,
-    History: null,
-}
-
+// === 注入 =====================================
 $(document).on(":passagerender", function (ev) {StateBeautifyMod.onPassageRender(ev)});
 
 StateBeautifyMod.onPassageRender = function (ev) {
     StateBeautifyMod.ev = ev;
     queueMicrotask(() => {
         StateBeautifyMod.LoadStats();
-        StateBeautifyMod.CheckSkills();
-        StateBeautifyMod.CheckCorruption();
-        StateBeautifyMod.CheckSexSkills();
-        StateBeautifyMod.CheckSchoolPerformances();
+        setTimeout(() => {
+            StateBeautifyMod.LoadSocial();
+            StateBeautifyMod.LoadCharacteristics();
+        }, 20);
+        // StateBeautifyMod.CheckCoreCharacteristics();
+        // StateBeautifyMod.CheckSkills();
+        // StateBeautifyMod.CheckCorruption();
+        // StateBeautifyMod.CheckSexSkills();
+        // StateBeautifyMod.CheckWeaponSkills();
+        // StateBeautifyMod.CheckSchoolPerformances();
+        // StateBeautifyMod.CheckNPCs();
+        // StateBeautifyMod.CheckReputations();
         // StateBeautifyMod.LoadAvatar();
     })
 };
 
+StateBeautifyMod.GetDisplay = function() {
+    let display = document.getElementById("display-bs");
+    if (!display) {
+        display = Object.assign(document.createElement("div"), {
+            id: "display-bs",
+            className: "display-bs characteristics-display"
+        });
+        $(StateBeautifyMod.ev.content).append(display);
+    };
+    return display
+}
+StateBeautifyMod.GetList = function(id, class_) {
+    const display = StateBeautifyMod.GetDisplay();
+    let list = null
+    if (id) {
+        list = display.querySelector(`#box-bs-list-${id}`);
+        if (!list) {
+            list = document.createElement("div");
+            list.id = `box-bs-list-${id}`;
+        };
+    } else {
+        list = document.createElement("div");
+    }
+    list.className = "BS-hide box-bs "+class_;
+    (list => setTimeout(() => {list.classList.remove("BS-hide")}, 100))(list);
+    display.append(list);
+    return list
+}
+StateBeautifyMod.FinishList = function(id, delay) {
+    let list = document.querySelector(`#box-bs-list-${id}`);
+    if (list) {
+        setTimeout(() => {
+            list.classList.add("BS-hide");
+            setTimeout(() => list.remove(), 800);
+        }, delay+800);
+    };
+}
 
 // === 状态动态 =================================
 StateBeautifyMod.LoadStats = function() {
@@ -118,208 +150,149 @@ StateBeautifyMod.LoadStats = function() {
     })
 };
 
-// === 特征动态 =================================
-StateBeautifyMod.LoadCharacteristics = function(id, config, percentLast) {
-    let display = document.getElementById("characteristics-display-bs");
-    if (!display) {
-        display = Object.assign(document.createElement("div"), {
-            id: "characteristics-display-bs",
-            className: "characteristics-display-bs characteristics-display"
-        });
-        $(StateBeautifyMod.ev.content).append(display);
-    };
-
-    let list = display.querySelector(`#characteristic-box-bs-list-${id}`);
-    if (!list) {
-        list = Object.assign(document.createElement("div"), {
-            id: `characteristic-box-bs-list-${id}`,
-            className: "characteristic-box-bs characteristic-box-list"
-        });
-        display.append(list);
-    };
-
-    T.config = config;
-    new Wikifier(list, `<<characteristic-box _config>>`);
-    const characteristic_boxes = list.querySelectorAll(".characteristic-box");
-    const characteristic_box = characteristic_boxes[characteristic_boxes.length - 1];
-    const bar = characteristic_box.querySelector(".meter > div");
-
-    if (percentLast) {
-        const widthnew = bar.style.width;
-        bar.style.transition = 'none';
-        bar.style.width = Math.floor(percentLast) + "%";
+// === 隐藏属性动态 =============================
+StateBeautifyMod.applyTransition = function(oldElement, newElement) {
+    // 递归比较两个元素的子节点
+    const compareAndAnimate = (oldNode, newNode) => {
+        if (!oldNode || !newNode || oldNode.nodeType !== 1 || newNode.nodeType !== 1) return;
         
-        bar.offsetHeight;
+        // 获取旧元素的所有内联样式
+        if (oldNode.style && newNode.style) {
+            const oldStyle = oldNode.style;
+            const newStyle = newNode.style;
+            
+            // 如果有内联样式，先设置为旧值，然后过渡到新值
+            if (oldStyle.length > 0 || newStyle.length > 0) {
+                // 保存新元素的原始内联样式
+                const originalStyles = {};
+                for (let i = 0; i < newStyle.length; i++) {
+                    const prop = newStyle[i];
+                    originalStyles[prop] = newStyle.getPropertyValue(prop);
+                }
+                newNode.style.transition = "none";
+                // 将新元素的内联样式设置为旧元素的值
+                for (let i = 0; i < oldStyle.length; i++) {
+                    const prop = oldStyle[i];
+                    const value = oldStyle.getPropertyValue(prop);
+                    newNode.style.setProperty(prop, value);
+                }
+                newNode.style.transition = "";
+                // 恢复为新样式，触发过渡
+                ((newNode, originalStyles) => setTimeout(() => {
+                    for (const [prop, value] of Object.entries(originalStyles)) {
+                        console.log(prop, value);
+                        
+                        newNode.style.setProperty(prop, value);
+                    }
+                }, 400))(newNode, originalStyles);
+            }
+        }
         
-        bar.style.transition = '';
-        ((bar, widthnew) => setTimeout(() => {bar.style.width = widthnew}, 400))(bar, widthnew);
+        // 递归比较子节点
+        const oldChildren = oldNode.children;
+        const newChildren = newNode.children;
+        const maxLength = Math.max(oldChildren.length, newChildren.length);
+        
+        for (let i = 0; i < maxLength; i++) {
+            compareAndAnimate(oldChildren[i], newChildren[i]);
+        }
     };
+    
+    compareAndAnimate(oldElement, newElement);
 
-    return [characteristic_box, bar]
-}
-StateBeautifyMod.LoadCharacteristicFinish = function(id, delay) {
-    let list = document.getElementById(`characteristic-box-bs-list-${id}`);
-    setTimeout(() => {
-        list.classList.add("BS-hide")
-        setTimeout(() => list.remove(), 800)
-    }, delay+800)
-}
-
-// === 技能动态 =================================
-StateBeautifyMod.detailedSkillGrades = [
-    { requiredValue: 0,		level: "None",	color: 'red'},
-    { requiredValue: 1,		level: "F",		color: 'pink'},
-    { requiredValue: 100,	level: "F+",	color: 'pink'},
-    { requiredValue: 200,	level: "D",		color: 'purple'},
-    { requiredValue: 300,	level: "D+",	color: 'purple'},
-    { requiredValue: 400,	level: "C",		color: 'blue'},
-    { requiredValue: 500,	level: "C+",	color: 'blue'},
-    { requiredValue: 600,	level: "B",		color: 'lblue'},
-    { requiredValue: 700,	level: "B+",	color: 'lblue'},
-    { requiredValue: 800,	level: "A",		color: 'teal'},
-    { requiredValue: 900,	level: "A+",	color: 'teal'},
-    { requiredValue: 1000,	level: "S",		color: 'green'}
-];
-StateBeautifyMod.GetCurrentLevel = function(currentValue, states) {
-    let currentLevel = 0
-    for (let index = 0; index < states.length; index++) {
-        if (currentValue >= states[index].requiredValue) {
-            currentLevel = index
-        }
-    }
-    return currentLevel
-}
-StateBeautifyMod.CheckSkill = function(name, cn_name, currentValue, id) {
-    if (currentValue) {
-        const config = { 
-            name : name, 
-            cn_name: cn_name,
-            displayType : "grade",	
-            currentValue : currentValue,		
-            modifier: 100, 
-            modTypes: { good: [], bad: [] },		
-            states : StateBeautifyMod.detailedSkillGrades
-        }
-        const valueNew = config.currentValue
-        const valueLast = StateBeautifyMod.LastSkills[name]
-        if (!valueLast) {
-            StateBeautifyMod.LastSkills[name] = valueNew
-        } else if (valueNew !== valueLast) {
-            StateBeautifyMod.LastSkills[name] = valueNew
-            const currentLevel = StateBeautifyMod.GetCurrentLevel(valueLast, StateBeautifyMod.detailedSkillGrades)
-            const requiredValue = StateBeautifyMod.detailedSkillGrades[currentLevel].requiredValue
-            const percent = valueLast - requiredValue
-            StateBeautifyMod.LoadCharacteristics(id, config, percent)
-            StateBeautifyMod.LoadCharacteristicFinish(id, 500)
+    const oldimgs = oldElement.querySelectorAll("img")
+    const newimgs = newElement.querySelectorAll("img")
+    const maxLength = Math.max(oldimgs.length, newimgs.length);
+    for (let index = 0; index < maxLength; index++) {
+        const oldimg = oldimgs[index];
+        const newimg = newimgs[index];
+        if (oldimg && newimg && oldimg.src !== newimg.src) {
+            newimg.style.transition = 'none';
+            newimg.style.opacity = 0;
+            newimg.style.scale = 1.5;
+            newimg.offsetHeight;
+            newimg.style.transition = '';
+            (img => setTimeout(() => {img.style.opacity = 1; img.style.scale = 1;}, 200 * index))(newimg);
         }
     }
 }
-StateBeautifyMod.CheckSkills = function () {
-    StateBeautifyMod.CheckSkill("Skulduggery", "诡术", V.skulduggery, "Skills")
-    StateBeautifyMod.CheckSkill("Dancing", "舞蹈", V.danceskill, "Skills")
-    StateBeautifyMod.CheckSkill("Swimming", "游泳", V.swimmingskill, "Skills")
-    StateBeautifyMod.CheckSkill("Athletics", "运动", V.athletics, "Skills")
-    StateBeautifyMod.CheckSkill("Tending", "护理", V.tending, "Skills")
-    StateBeautifyMod.CheckSkill("Housekeeping", "家务", V.housekeeping, "Skills")
-    StateBeautifyMod.CheckSkill("Photography", "摄影", V.Phone.photography, "Skills")
-}
-StateBeautifyMod.CheckCorruption = function () {
-    const config = { 
-        name : "Corruption",
-        cn_name: "堕落",	
-        displayType : "none",	
-        currentValue : V.earSlime.corruption,	
-        modifier: 100, 
-        modTypes: { good: [], bad: [] },		
-        meterColor: V.earSlime.startedThreats ? "purple" : "blue", 
-        secondValue: V.earSlime.growth / 2, 
-        secondMeterColor: "red"
-    }
-    const valueNew = config.currentValue
-    const valueLast = StateBeautifyMod.LastCorruption
-    if (!valueLast) {
-        StateBeautifyMod.LastCorruption = config.currentValue
-    } else if (valueNew !== valueLast) {
-        StateBeautifyMod.LastCorruption = config.currentValue
-        StateBeautifyMod.LoadCharacteristics("Corruption", config, valueLast)
-        StateBeautifyMod.LoadCharacteristicFinish("Corruption", 500)
-    }
-}
 
-// === 性技能动态 ===============================
-StateBeautifyMod.CheckSexSkills = function () {
-    StateBeautifyMod.CheckSkill("Seduction", "魅惑", V.seductionskill, "SexSkills")
-    StateBeautifyMod.CheckSkill("Oral", "口部", V.oralskill, "SexSkills")
-    StateBeautifyMod.CheckSkill("Chest", "胸部", V.chestskill, "SexSkills")
-    StateBeautifyMod.CheckSkill("Hands", "手部", V.handskill, "SexSkills")
-    StateBeautifyMod.CheckSkill("Buttocks", "臀部", V.bottomskill, "SexSkills")
-    StateBeautifyMod.CheckSkill("Anal", "后庭", V.analskill, "SexSkills")
-    StateBeautifyMod.CheckSkill("Thighs", "大腿", V.thighskill, "SexSkills")
-    StateBeautifyMod.CheckSkill("Feet", "足部", V.feetskill, "SexSkills")
-    if (V.player.penisExist) {
-        StateBeautifyMod.CheckSkill("Penile", "阴茎", V.penileskill, "SexSkills")
-    } else {
-        StateBeautifyMod.CheckSkill("Strap-on use", "穿戴式假阴茎", V.penileskill, "SexSkills")
-    }
-    if (V.player.vaginaExist) {
-        StateBeautifyMod.CheckSkill("Vaginal", "小穴", V.vaginalskill, "SexSkills")
-    }
-}
+// === 社交动态 =================================
+StateBeautifyMod.LoadSocial = function() {
+    StateBeautifyMod.social_div = document.createElement("div");
+    new Wikifier(StateBeautifyMod.social_div, "<<social>>");
+    const display = {}
+    const relation_boxes = StateBeautifyMod.social_div.querySelectorAll(".relation-box");
+    for (let index = 0; index < relation_boxes.length; index++) {
+        const relation_box = relation_boxes[index];
+        let relation_title = relation_box.querySelector(".relation-top-line > .relation-name")?.innerText;
+        const relation_class_id = relation_box.parentElement?.id;  // 这个键若为null，则在之后单独分组，但在display中为同一组
 
-// === 成绩动态 =================================
-StateBeautifyMod.schoolGradeStates = [
-    { requiredValue: -1,	level: 'F',		color: 'red'},
-    { requiredValue: 0,		level: 'D',		color: 'purple'},
-    { requiredValue: 1,		level: 'C',		color: 'blue'},
-    { requiredValue: 2,		level: 'B',		color: 'lblue'},
-    { requiredValue: 3,		level: 'A',		color: 'teal'},
-    { requiredValue: 4,		level: 'A*',	color: 'green'}
-];
-StateBeautifyMod.CheckSchoolPerformances = function () {
-    StateBeautifyMod.CheckSchoolPerformance('Science', '科学', 'misc/icon/science', V.sciencetrait, V.science_exam,  V.science_star)
-    StateBeautifyMod.CheckSchoolPerformance('Maths', '数学', 'misc/icon/math', V.mathstrait, V.maths_exam,  V.maths_star)
-    StateBeautifyMod.CheckSchoolPerformance('English', '语文', 'misc/icon/english', V.englishtrait, V.english_exam,  V.english_star)
-    StateBeautifyMod.CheckSchoolPerformance('History', '历史', 'misc/icon/history', V.historytrait, V.history_exam,  V.history_star)
-}
-StateBeautifyMod.CheckSchoolPerformance = function(name, cn_name, icon, currentValue, percent, starLevel) {
-    const config = { 
-        name : name, 
-        cn_name : cn_name, 
-        icon : icon, 
-        displayType : "grade",	
-        currentValue : currentValue,	
-        modifier: 100, 
-        modTypes: { good: [], bad: [] },	
-        percent: percent,		
-        showStars: true, 
-        starLevel: starLevel,	
-        states : StateBeautifyMod.schoolGradeStates
-    };
-    const percentNew = config.percent
-    const percentLast = StateBeautifyMod.LastSchoolPerformance[name]
-    if (!percentLast) {
-        StateBeautifyMod.LastSchoolPerformance[name] = percentNew
-    } else if (percentNew !== percentLast) {
-        StateBeautifyMod.LastSchoolPerformance[name] = percentNew
+        if (relation_class_id === "global-recognition") relation_title = relation_box.querySelector(".relation-description").childNodes[0].textContent.trim().replace('：', '');  // 单独适配知名度
 
-        const [characteristic_box, bar] = StateBeautifyMod.LoadCharacteristics("SchoolPerformance", config, percentLast)
-
-        const stars = characteristic_box.querySelectorAll(".progress-stars > img")
-        for (let index = 0; index < stars.length; index++) {
-            const star = stars[index];
-            star.style.transition = 'none';
-            star.style.opacity = 0;
-            star.style.scale = 1.5;
-            star.offsetHeight;
-            star.style.transition = '';
-            (star => setTimeout(() => {star.style.opacity = 1; star.style.scale = 1;}, 200 * index))(star);
+        if (relation_title) {  // 有Title，才有键，才可以动态查询修改
+            const LastRelation = StateBeautifyMod.LastRelations[relation_title];
+            if (LastRelation && LastRelation.innerText !== relation_box.innerText) {  // 有改动，动态展示，否则不变
+                if (!display.hasOwnProperty(relation_class_id)) {
+                    display[relation_class_id] = []
+                }
+                display[relation_class_id].push([LastRelation, relation_box])  // 格式：原来的, 现在的
+            }
+            StateBeautifyMod.LastRelations[relation_title] = relation_box  // 不论前一个是否存在，都要保存
         }
+    }
 
-        StateBeautifyMod.LoadCharacteristicFinish("SchoolPerformance", stars.length*200 + 500)
+    for (const relation_class_id in display) {
+        const relations = display[relation_class_id]
+        for (let index = 0; index < relations.length; index++) {
+            const [LastRelation, NewRelation] = relations[index];
+            const list_div = StateBeautifyMod.GetList(relation_class_id, "relation-box-list");
+            list_div.append(NewRelation);
+            StateBeautifyMod.applyTransition(LastRelation, NewRelation);
+        }
+        StateBeautifyMod.FinishList(relation_class_id, 800)
     }
 }
 
+// === 属性动态 =================================
+StateBeautifyMod.LoadCharacteristics = function() {
+    StateBeautifyMod.characteristic_div = document.createElement("div");
+    new Wikifier(StateBeautifyMod.characteristic_div, "<<characteristics>>");
+    const display = {}
+    const characteristic_boxes = StateBeautifyMod.characteristic_div.querySelectorAll(".characteristic-box");
+    for (let index = 0; index < characteristic_boxes.length; index++) {
+        const characteristic_box = characteristic_boxes[index];
+        const characteristic_title = characteristic_box.querySelector(".characteristic-top-line > .characteristic-title")?.innerText;
+        if (characteristic_title) {  // 有Title，才有键，才可以动态查询修改
+            const LastCharacteristic = StateBeautifyMod.LastCharacteristics[characteristic_title];
+            let characteristic_class_id = characteristic_box.parentElement?.id;  // 这个键若为null，则在之后单独分组，但在display中为同一组
 
+            if (characteristic_box.parentElement?.className === "sex-diagram-box") characteristic_class_id = "sex-diagram";  // 单独适配性技能
+
+            if (LastCharacteristic && LastCharacteristic.innerText !== characteristic_box.innerText) {  // 有改动，动态展示，否则不变
+                if (!display.hasOwnProperty(characteristic_class_id)) {
+                    display[characteristic_class_id] = []
+                }
+                display[characteristic_class_id].push([LastCharacteristic, characteristic_box])  // 格式：原来的, 现在的
+            }
+            StateBeautifyMod.LastCharacteristics[characteristic_title] = characteristic_box  // 不论前一个是否存在，都要保存
+        }
+    }
+
+    for (const characteristic_class_id in display) {
+        const characteristics = display[characteristic_class_id]
+        for (let index = 0; index < characteristics.length; index++) {
+            const [LastCharacteristic, NewCharacteristic] = characteristics[index];
+            const list_div = StateBeautifyMod.GetList(characteristic_class_id, "characteristic-box-list");
+            list_div.append(NewCharacteristic);
+            StateBeautifyMod.applyTransition(LastCharacteristic, NewCharacteristic);
+        }
+        StateBeautifyMod.FinishList(characteristic_class_id, 800)
+    }
+};
+
+
+// === 头像（废弃） =============================
 StateBeautifyMod.LoadAvatar = function() {
     const div_avatar = document.createElement("div")
     div_avatar.id = "avatar-container"
