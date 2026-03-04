@@ -1,9 +1,9 @@
 {
-    "name": "DoL状态美化",
-    "nickName": "",
-    "version": "1.4.0",
-    "styleFileList": ["beautifyStat.css"],
-    "scriptFileList": ["beautifyStat.js"],
+    "name": "Dynamicest",
+    "nickName": "极致动态",
+    "version": "1.5.0",
+    "styleFileList": ["dynamicest.css"],
+    "scriptFileList": ["dynamicest.js"],
     "tweeFileList": [],
     "imgFileList": [],
     "dependenceInfo": [

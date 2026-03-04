@@ -53,13 +53,13 @@
     margin-block: -3px;
 }
 /* 全局动态 */
-.BS-show {
+.dynamicest-show {
     opacity: 1;
 }
-.BS-hide {
+.dynamicest-hide {
     opacity: 0;
 }
-.display-bs {
+.display-dynamicest {
     position: fixed;
     right: 10px;
     top: 20px;
@@ -70,20 +70,20 @@
     overflow: auto;
     max-height: stretch;
 }
-.display-bs > .box-bs > div {
+.display-dynamicest > .box-dynamicest > div {
     min-width: 45%;
 }
-.display-bs * {
+.display-dynamicest * {
     transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.box-bs {
+.box-dynamicest {
     background-color: var(--850);
     transition: opacity 0.8s ease;
 }
-.box-bs .meter {
+.box-dynamicest .meter {
     z-index: 0;
 }
-.box-bs-stretch {
+.box-dynamicest-stretch {
     min-width: stretch !important;
 }
 .foldedDisplay-box-list {    /* 折叠 */
@@ -91,6 +91,11 @@
     margin: 0.15rem;
     cursor: pointer;
     border: 1px solid var(--300);
+}
+/* 单独为特质加入边距 */
+.box-dynamicest.traits > .trait {
+    margin: 0.15rem;
+    flex-grow: 1;
 }
 
 

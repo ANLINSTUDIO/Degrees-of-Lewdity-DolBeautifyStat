@@ -1,46 +1,49 @@
-window.StateBeautifyMod = {}
+window.Dynamicest = {}
 
 // === 数值存储 =================================
-StateBeautifyMod.First = true;
-StateBeautifyMod.Finish = [];
-StateBeautifyMod.DisplayFold = {};
-StateBeautifyMod.DisplayFoldMax = 5;
-StateBeautifyMod.DisplayFoldClose = false;
-StateBeautifyMod.LastMoney = null;
-StateBeautifyMod.LastState = new Map();
-StateBeautifyMod.LastRelations = {};
-StateBeautifyMod.LastCharacteristics = {};
+Dynamicest.First = true;
+Dynamicest.Finish = [];
+Dynamicest.DisplayFold = {};
+Dynamicest.DisplayFoldMax = 5;
+Dynamicest.DisplayFoldClose = false;
+Dynamicest.LastMoney = null;
+Dynamicest.LastState = new Map();
+Dynamicest.LastRelations = {};
+Dynamicest.LastCharacteristics = {};
+Dynamicest.LastTraits = {};
 
 
 // === 注入 =====================================
-$(document).on(":passagerender", function (ev) {StateBeautifyMod.onPassageRender(ev)});
-StateBeautifyMod.onPassageRender = function (ev) {
-    StateBeautifyMod.ev = ev;
-    StateBeautifyMod.DisplayFold = {};
-    StateBeautifyMod.DisplayFoldClose = false;
+$(document).on(":passagerender", function (ev) {Dynamicest.onPassageRender(ev)});
+Dynamicest.onPassageRender = function (ev) {
+    if (V.passage === "Start") return;
+    Dynamicest.ev = ev;
+    Dynamicest.DisplayFold = {};
+    Dynamicest.DisplayFoldClose = false;
     queueMicrotask(() => {
-        StateBeautifyMod.LoadMoney();
-        StateBeautifyMod.LoadStats();
-        setTimeout(() => {
-            StateBeautifyMod.LoadSocial();
-            StateBeautifyMod.LoadCharacteristics();
-            StateBeautifyMod.First = false;
-            StateBeautifyMod.LoadFoldedDisplay();
-        }, 20);
-        // StateBeautifyMod.CheckCoreCharacteristics();
-        // StateBeautifyMod.CheckSkills();
-        // StateBeautifyMod.CheckCorruption();
-        // StateBeautifyMod.CheckSexSkills();
-        // StateBeautifyMod.CheckWeaponSkills();
-        // StateBeautifyMod.CheckSchoolPerformances();
-        // StateBeautifyMod.CheckNPCs();
-        // StateBeautifyMod.CheckReputations();
-        // StateBeautifyMod.LoadAvatar();
-    })
+        const runTask = (task) => {
+            return new Promise(resolve => {
+                requestAnimationFrame(() => {
+                    task();
+                    resolve();
+                });
+            });
+        };
+        
+        runTask(() => Dynamicest.LoadMoney())
+            .then(() => runTask(() => Dynamicest.LoadStats()))
+            .then(() => runTask(() => Dynamicest.LoadSocial()))
+            .then(() => runTask(() => Dynamicest.LoadCharacteristics()))
+            .then(() => runTask(() => Dynamicest.LoadTrait()))
+            .then(() => runTask(() => {
+                Dynamicest.First = false;
+                Dynamicest.LoadFoldedDisplay();
+            }));
+    });
 };
 
 // === 金钱动态 =================================
-StateBeautifyMod.animateMoneyChange = function(lastMoney, newMoney, relMoneyAbs, isPositive) {
+Dynamicest.animateMoneyChange = function(lastMoney, newMoney, relMoneyAbs, isPositive) {
     const relElement = document.getElementById('relmoney');
     const nowElement = document.getElementById('nowmoney');
     
@@ -85,16 +88,16 @@ StateBeautifyMod.animateMoneyChange = function(lastMoney, newMoney, relMoneyAbs,
     
     requestAnimationFrame(animate);
 };
-StateBeautifyMod.LoadMoney = function() {
+Dynamicest.LoadMoney = function() {
     const newMoney = (V.money / 100).toFixed(2);
-    const lastMoney = StateBeautifyMod.LastMoney ? (StateBeautifyMod.LastMoney / 100).toFixed(2) : null;
+    const lastMoney = Dynamicest.LastMoney ? (Dynamicest.LastMoney / 100).toFixed(2) : null;
     
     if (lastMoney && newMoney !== lastMoney) {
         const relMoney = (parseFloat(newMoney) - parseFloat(lastMoney)).toFixed(2);
         const relMoneyAbs = Math.abs(relMoney).toFixed(2);
         const isPositive = relMoney >= 0;
         
-        const list = StateBeautifyMod.GetList("money", "money-box-list");
+        const list = Dynamicest.GetList("money", "money-box-list");
         list.innerHTML = `
         <div>
             <span>转账</span>
@@ -112,13 +115,13 @@ StateBeautifyMod.LoadMoney = function() {
             this.animateMoneyChange(lastMoney, newMoney, relMoneyAbs, isPositive);
         }, 1000);
 
-        StateBeautifyMod.FinishList("money", 2000);
+        Dynamicest.FinishList("money", 2000);
     }
-    StateBeautifyMod.LastMoney = V.money;
+    Dynamicest.LastMoney = V.money;
 };
 
 // === 状态动态 =================================
-StateBeautifyMod.LoadStats = function() {
+Dynamicest.LoadStats = function() {
     const stowed = document.getElementById("ui-bar").classList.contains("stowed")
     const stats = document.querySelectorAll('#statmeters > div');
     const mobileStats = document.querySelectorAll('#mobileStats .stat');
@@ -141,9 +144,9 @@ StateBeautifyMod.LoadStats = function() {
             const newWidth = bar? bar.style.width: '0%';
             let lastclassname = '';
             let lastWidth = '0%';
-            if (StateBeautifyMod.LastState.has(stat_id)) {
-                lastclassname = StateBeautifyMod.LastState.get(stat_id)[0];
-                lastWidth = StateBeautifyMod.LastState.get(stat_id)[1];
+            if (Dynamicest.LastState.has(stat_id)) {
+                lastclassname = Dynamicest.LastState.get(stat_id)[0];
+                lastWidth = Dynamicest.LastState.get(stat_id)[1];
             }
 
             // 没有bar了：可能是为值零，不显示了
@@ -195,7 +198,7 @@ StateBeautifyMod.LoadStats = function() {
                 bar.style.width = newWidth;
             }
 
-            StateBeautifyMod.LastState.set(stat_id, [newclassname, newWidth]);
+            Dynamicest.LastState.set(stat_id, [newclassname, newWidth]);
         } catch (err)  {
             console.log(`[状态美化错误] ${stat_id} ${err}:  ${stat.getHTML()}`);
         }
@@ -203,53 +206,57 @@ StateBeautifyMod.LoadStats = function() {
 };
 
 // === 隐藏属性动态 =============================
-StateBeautifyMod.GetDisplay = function() {
-    let display = document.getElementById("display-bs");
+Dynamicest.GetDisplay = function() {
+    let display = document.getElementById("display-dynamicest");
     if (!display) {
         display = Object.assign(document.createElement("div"), {
-            id: "display-bs",
-            className: "display-bs characteristics-display"
+            id: "display-dynamicest",
+            className: "display-dynamicest characteristics-display"
         });
-        $(StateBeautifyMod.ev.content).append(display);
+        $(Dynamicest.ev.content).append(display);
     };
     return display
 };
-StateBeautifyMod.GetList = function(id, class_) {
-    const display = StateBeautifyMod.GetDisplay();
+Dynamicest.GetList = function(id, class_) {
+    id = id.trim();
+    const display = Dynamicest.GetDisplay();
     let list = null;
     if (id) {
-        list = display.querySelector(`#box-bs-list-${id}`);
+        list = display.querySelector(`#box-dynamicest-list-${id}`);
         if (!list) {
             list = document.createElement("div");
-            list.id = `box-bs-list-${id}`;
+            list.id = `box-dynamicest-list-${id}`;
         };
     } else {
         list = document.createElement("div");
     }
-    list.className = "BS-hide box-bs "+class_;
-    (list => setTimeout(() => {list.classList.remove("BS-hide")}, 100))(list);
+    list.className = "dynamicest-hide box-dynamicest "+class_;
+    (list => setTimeout(() => {list.classList.remove("dynamicest-hide")}, 100))(list);
     display.append(list);
     return list
 };
-StateBeautifyMod.FinishList = function(id, delay) {
-    let list = document.querySelector(`#box-bs-list-${id}`);
-    StateBeautifyMod.Finish.push(id);
+Dynamicest.FinishList = function(id, delay) {
+    id = id.trim();
+    let list = document.querySelector(`#box-dynamicest-list-${id}`);
+    Dynamicest.Finish.push(id);
     if (list) {
         setTimeout(() => {
-            if (StateBeautifyMod.Finish.includes(id)) {
-                list.classList.add("BS-hide");
+            if (Dynamicest.Finish.includes(id)) {
+                list.classList.add("dynamicest-hide");
                 setTimeout(() => list.remove(), 800);
-                StateBeautifyMod.Finish.splice(StateBeautifyMod.Finish.indexOf(id), 1);
+                Dynamicest.Finish.splice(Dynamicest.Finish.indexOf(id), 1);
             }
         }, delay+800);
     };
 };
-StateBeautifyMod.CancelFinishList = function(id) {
-    if (StateBeautifyMod.Finish.includes(id)) {
-        StateBeautifyMod.Finish.splice(StateBeautifyMod.Finish.indexOf(id), 1);
+Dynamicest.CancelFinishList = function(id) {
+    if (Dynamicest.Finish.includes(id)) {
+        Dynamicest.Finish.splice(Dynamicest.Finish.indexOf(id), 1);
+        return true;
     }
+    return false;
 };
-StateBeautifyMod.applyTransition = function(oldElement, newElement) {
+Dynamicest.applyTransition = function(oldElement, newElement) {
     // 递归比较两个元素的子节点
     const compareAndAnimate = (oldNode, newNode) => {
         if (!oldNode || !newNode || oldNode.nodeType !== 1 || newNode.nodeType !== 1) return;
@@ -316,64 +323,72 @@ StateBeautifyMod.applyTransition = function(oldElement, newElement) {
 };
 
 // === 社交动态 =================================
-StateBeautifyMod.LoadSocial = function() {
-    StateBeautifyMod.social_div = document.createElement("div");
-    new Wikifier(StateBeautifyMod.social_div, "<<social>>");
+Dynamicest.LoadSocial = function() {
+    Dynamicest.social_div = document.createElement("div");
+    new Wikifier(Dynamicest.social_div, "<<social>>");
     const display = {};
     let display_num = 0;
-    const relation_boxes = StateBeautifyMod.social_div.querySelectorAll(".relation-box");
+    const NewRelations = {};
+    const relation_boxes = Dynamicest.social_div.querySelectorAll(".relation-box");
     for (let index = 0; index < relation_boxes.length; index++) {
         const relation_box = relation_boxes[index];
-        let relation_title = relation_box.querySelector(".relation-top-line > .relation-name")?.innerText;
+        let relation_title = relation_box.querySelector(".relation-top-line > .relation-name")?.innerText.trim();
         const relation_class_id = relation_box.parentElement?.id;  // 这个键若为null，则在之后单独分组，但在display中为同一组
 
         if (relation_class_id === "global-recognition") relation_title = relation_box.querySelector(".relation-description").childNodes[0].textContent.trim().replace('：', '');  // 单独适配知名度
 
         if (relation_title) {  // 有Title，才有键，才可以动态查询修改
-            const LastRelation = StateBeautifyMod.LastRelations[relation_title];
+            const LastRelation = Dynamicest.LastRelations[relation_title];
             if (LastRelation) {
                 if (LastRelation.innerText !== relation_box.innerText) {  // 有改动，动态展示，否则不变
                     if (!display.hasOwnProperty(relation_class_id)) display[relation_class_id] = [];
                     display[relation_class_id].push([LastRelation, relation_box]);  // 格式：原来的, 现在的
                     display_num += 1;
                 }
-            } else if (!StateBeautifyMod.First) {
+            } else if (!Dynamicest.First) {
                 if (!display.hasOwnProperty(relation_class_id)) display[relation_class_id] = [];
                 display[relation_class_id].push([relation_box, relation_box]);  // 格式：都是现在的，这个是新NPC的出现
                 display_num += 1;
             };
-            StateBeautifyMod.LastRelations[relation_title] = relation_box;  // 不论前一个是否存在，都要保存
+            NewRelations[relation_title] = relation_box;  // 不论前一个是否存在，都要保存
         }
     }
 
-    if (display_num > StateBeautifyMod.DisplayFoldMax) {
-        StateBeautifyMod.DisplayFold["relation-box-list"] = display;
+    Dynamicest.LastRelations = NewRelations;
+
+    if (display_num > Dynamicest.DisplayFoldMax) {
+        Dynamicest.DisplayFold["relation-box-list"] = display;
     } else {
         for (const relation_class_id in display) {
             const relations = display[relation_class_id]
             for (let index = 0; index < relations.length; index++) {
                 const [LastRelation, NewRelation] = relations[index];
-                const list_div = StateBeautifyMod.GetList(relation_class_id, "relation-box-list");
+                const list_div = Dynamicest.GetList(relation_class_id, "relation-box-list");
                 list_div.append(NewRelation);
-                StateBeautifyMod.applyTransition(LastRelation, NewRelation);
+                Dynamicest.applyTransition(LastRelation, NewRelation);
             }
-            StateBeautifyMod.FinishList(relation_class_id, 800)
+            Dynamicest.FinishList(relation_class_id, 800)
         }
     }
 };
 
 // === 属性动态 =================================
-StateBeautifyMod.LoadCharacteristics = function() {
-    StateBeautifyMod.characteristic_div = document.createElement("div");
-    new Wikifier(StateBeautifyMod.characteristic_div, "<<characteristics>>");
+Dynamicest.LoadCharacteristics = function() {
+    Dynamicest.characteristic_div = document.createElement("div");
+    new Wikifier(Dynamicest.characteristic_div, "<<characteristics>>");
     const display = {};
     let display_num = 0;
-    const characteristic_boxes = StateBeautifyMod.characteristic_div.querySelectorAll(".characteristic-box");
+    const NewCharacteristics = {};
+    const characteristic_boxes = Dynamicest.characteristic_div.querySelectorAll(".characteristic-box");
     for (let index = 0; index < characteristic_boxes.length; index++) {
         const characteristic_box = characteristic_boxes[index];
-        const characteristic_title = characteristic_box.querySelector(".characteristic-top-line > .characteristic-title")?.innerText;
+        const div_characteristic_title = characteristic_box.querySelector(".characteristic-top-line > .characteristic-title");
+        const characteristic_title = Array.from(div_characteristic_title.childNodes)
+            .filter(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '')
+            .map(node => node.textContent.trim())
+            .join('');
         if (characteristic_title) {  // 有Title，才有键，才可以动态查询修改
-            const LastCharacteristic = StateBeautifyMod.LastCharacteristics[characteristic_title];
+            const LastCharacteristic = Dynamicest.LastCharacteristics[characteristic_title];
             let characteristic_class_id = characteristic_box.parentElement?.id;  // 这个键若为null，则在之后单独分组，但在display中为同一组
             let content_changed = LastCharacteristic?.innerText !== characteristic_box?.innerText;
 
@@ -387,65 +402,113 @@ StateBeautifyMod.LoadCharacteristics = function() {
                 display[characteristic_class_id].push([LastCharacteristic, characteristic_box]);  // 格式：原来的, 现在的
                 display_num += 1;
             }
-            StateBeautifyMod.LastCharacteristics[characteristic_title] = characteristic_box  // 不论前一个是否存在，都要保存
+            NewCharacteristics[characteristic_title] = characteristic_box  // 不论前一个是否存在，都要保存
         }
     };
 
-    if (display_num > StateBeautifyMod.DisplayFoldMax) {
-        StateBeautifyMod.DisplayFold["characteristic-box-list"] = display
+    Dynamicest.LastCharacteristics = NewCharacteristics;
+
+    if (display_num > Dynamicest.DisplayFoldMax) {
+        Dynamicest.DisplayFold["characteristic-box-list"] = display
     } else {
         for (const characteristic_class_id in display) {
             const characteristics = display[characteristic_class_id]
             for (let index = 0; index < characteristics.length; index++) {
                 const [LastCharacteristic, NewCharacteristic] = characteristics[index];
-                const list_div = StateBeautifyMod.GetList(characteristic_class_id, "characteristic-box-list");
+                const list_div = Dynamicest.GetList(characteristic_class_id, "characteristic-box-list");
                 list_div.append(NewCharacteristic);
-                StateBeautifyMod.applyTransition(LastCharacteristic, NewCharacteristic);
+                Dynamicest.applyTransition(LastCharacteristic, NewCharacteristic);
             }
-            StateBeautifyMod.FinishList(characteristic_class_id, 800)
+            Dynamicest.FinishList(characteristic_class_id, 800)
         }
     };
 };
 
+// === 特质动态 =================================
+Dynamicest.LoadTrait = function() {
+    Dynamicest.trait_div = document.createElement("div");
+    new Wikifier(Dynamicest.trait_div, "<<traits>>");
+    const display = {};
+    let display_num = 0;
+    const NewTraits = {};
+    const trait_boxes = Dynamicest.trait_div.querySelectorAll(".trait");
+    for (let index = 0; index < trait_boxes.length; index++) {
+        const trait_box = trait_boxes[index];
+        const trait_title = trait_box.querySelector("span")?.innerText.trim();
+        const trait_class_id = trait_box.parentElement?.parentElement?.querySelector(".traitHeading")?.innerText.trim();  // 这个键若为null，则在之后单独分组，但在display中为同一组
+
+        if (trait_title) {  // 有Title，才有键，才可以动态查询修改
+            const LastTrait = Dynamicest.LastTraits[trait_title];
+            if (LastTrait) {
+                if (LastTrait.innerText !== trait_box.innerText) {  // 有改动，动态展示，否则不变
+                    if (!display.hasOwnProperty(trait_class_id)) display[trait_class_id] = [];
+                    display[trait_class_id].push([LastTrait, trait_box]);  // 格式：原来的, 现在的
+                    display_num += 1;
+                }
+            } else if (!Dynamicest.First) {
+                if (!display.hasOwnProperty(trait_class_id)) display[trait_class_id] = [];
+                display[trait_class_id].push([trait_box, trait_box]);  // 格式：都是现在的，这个是新特质的出现
+                display_num += 1;
+            };
+            NewTraits[trait_title] = trait_box;  // 不论前一个是否存在，都要保存
+        }
+    }
+
+    Dynamicest.LastTraits = NewTraits;
+
+    if (display_num > Dynamicest.DisplayFoldMax) {
+        Dynamicest.DisplayFold["traits"] = display;
+    } else {
+        for (const trait_class_id in display) {
+            const traits = display[trait_class_id]
+            for (let index = 0; index < traits.length; index++) {
+                const [LastTrait, NewTrait] = traits[index];
+                const list_div = Dynamicest.GetList(trait_class_id, "traits");
+                list_div.append(NewTrait);
+                Dynamicest.applyTransition(LastTrait, NewTrait);
+            }
+            Dynamicest.FinishList(trait_class_id, 1500)
+        }
+    }
+};
 
 // === 折叠动态 =================================
-StateBeautifyMod.LoadFoldedDisplay = function() {
-    if (Object.keys(StateBeautifyMod.DisplayFold).length > 0) {
-        const list = StateBeautifyMod.GetList("foldedDisplay", "foldedDisplay-box-list");
+Dynamicest.LoadFoldedDisplay = function() {
+    if (Object.keys(Dynamicest.DisplayFold).length > 0) {
+        const list = Dynamicest.GetList("foldedDisplay", "foldedDisplay-box-list");
         list.innerHTML = `
-        <div onclick="StateBeautifyMod.UnfoldDisplay()">
+        <div onclick="Dynamicest.UnfoldDisplay()">
             <span id="foldedDisplay">查看所有数值的改变</span>
         </div>
         `;
 
-        StateBeautifyMod.FinishList("foldedDisplay", 3000);
+        Dynamicest.FinishList("foldedDisplay", 5000);
     }
 };
-StateBeautifyMod.UnfoldDisplay = function() {
-    if (!StateBeautifyMod.DisplayFoldClose) {
-        this.CancelFinishList("foldedDisplay");
+Dynamicest.UnfoldDisplay = function() {
+    if (!Dynamicest.DisplayFoldClose && Dynamicest.CancelFinishList("foldedDisplay")) {
         const foldedDisplay = document.querySelector("#foldedDisplay");
         if (foldedDisplay) foldedDisplay.innerText = "关闭所有数值的改变";
-        StateBeautifyMod.DisplayFoldClose = true;
+        Dynamicest.DisplayFoldClose = true;
 
-        for (let key in StateBeautifyMod.DisplayFold) {
-            let display = StateBeautifyMod.DisplayFold[key]
+        for (let key in Dynamicest.DisplayFold) {
+            let display = Dynamicest.DisplayFold[key]
             for (const class_id in display) {
                 const divs = display[class_id];
                 for (let index = 0; index < divs.length; index++) {
                     const [Last, New] = divs[index];
-                    const list_div = StateBeautifyMod.GetList(class_id, key);
+                    const list_div = Dynamicest.GetList(class_id, key);
                     list_div.append(New);
-                    StateBeautifyMod.applyTransition(Last, New);
+                    Dynamicest.applyTransition(Last, New);
                 }
             }
         }
     } else {
-        StateBeautifyMod.FinishList("foldedDisplay", -800);
-        for (let key in StateBeautifyMod.DisplayFold) {
-            let display = StateBeautifyMod.DisplayFold[key]
+        Dynamicest.FinishList("foldedDisplay", -800);
+        for (let key in Dynamicest.DisplayFold) {
+            let display = Dynamicest.DisplayFold[key]
             for (const class_id in display) {
-                StateBeautifyMod.FinishList(class_id, -800);
+                Dynamicest.FinishList(class_id, -800);
             }
         }
     }
@@ -453,7 +516,7 @@ StateBeautifyMod.UnfoldDisplay = function() {
 
 
 // === 头像（废弃） =============================
-StateBeautifyMod.LoadAvatar = function() {
+Dynamicest.LoadAvatar = function() {
     const div_avatar = document.createElement("div")
     div_avatar.id = "avatar-container"
     console.log(div_avatar);
