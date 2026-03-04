@@ -34,6 +34,24 @@
 
 
 /* === 浮动弹窗 =============================== */
+/* 金钱动态 */
+.money-box-list {
+    padding: 10px;
+    margin: 0.15rem;
+    margin-left: 50%;
+    font-weight: bold;
+    border: 1px solid var(--300);
+}
+.money-box-list > div {
+    display: flex;
+    justify-content: space-between;
+    color: var(--gold);
+}
+.money-box-list > #barmoney {
+    height: 2px;
+    background-color: var(--gold);
+    margin-block: -3px;
+}
 /* 全局动态 */
 .BS-show {
     opacity: 1;
@@ -49,6 +67,11 @@
     max-width: 400px;
     z-index: 1001;  /* 高于成就 */
     transition: opacity 0.8s ease;
+    overflow: auto;
+    max-height: stretch;
+}
+.display-bs > .box-bs > div {
+    min-width: 45%;
 }
 .display-bs * {
     transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
@@ -62,6 +85,12 @@
 }
 .box-bs-stretch {
     min-width: stretch !important;
+}
+.foldedDisplay-box-list {    /* 折叠 */
+    padding: 10px;
+    margin: 0.15rem;
+    cursor: pointer;
+    border: 1px solid var(--300);
 }
 
 
