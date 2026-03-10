@@ -12,23 +12,19 @@
 
 
 /* === 头像 =============================== */
+:root {
+    --story-bottom: 100px;
+}
 #story {
-    padding-bottom: 100px;
+    padding-bottom: var(--story-bottom);
 }
 #avatar-container {
+    pointer-events: none;
     position: fixed;
-    bottom: -100px;
-    left: -100px;
-
-    width: 200px;
-    height: 200px;
-
-    border-radius: 50%;
-    background: #222222;
 }
-#avatar {
-    width: 200px;
-    height: 200px;
+#avatar-move {
+    pointer-events: all;
+    position: absolute;
 }
 
 
@@ -59,10 +55,13 @@
 .dynamicest-hide {
     opacity: 0;
 }
+:root {
+    --dynamicest-display-top: 20px;
+}
 .display-dynamicest {
     position: fixed;
     right: 10px;
-    top: 20px;
+    top: var(--dynamicest-display-top);
     width: 80vw;
     max-width: 400px;
     z-index: 1001;  /* 高于成就 */

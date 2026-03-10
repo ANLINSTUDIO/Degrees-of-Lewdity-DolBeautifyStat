@@ -8,19 +8,48 @@ Dynamicest.DisplayFoldMax = 5;
 Dynamicest.DisplayFoldClose = false;
 Dynamicest.LastMoney = null;
 Dynamicest.LastState = new Map();
-Dynamicest.LastRelations = {};
 Dynamicest.LastCharacteristics = {};
+Dynamicest.LastRelations = {};
 Dynamicest.LastTraits = {};
 
 
 // === 注入 =====================================
 $(document).on(":passagerender", function (ev) {Dynamicest.onPassageRender(ev)});
 Dynamicest.onPassageRender = function (ev) {
+
+    // === 数值存储存档 ==============================
+    V.Dynamicest = V.Dynamicest || {};
+
+    // 设置
+    V.Dynamicest.Settings = V.Dynamicest.Settings || {};
+    V.Dynamicest.Settings.FilterRelations = V.Dynamicest.Settings.FilterRelations || ["巨鹰 恐怖者"];
+    V.Dynamicest.Settings.FilterCharacteristics = V.Dynamicest.Settings.FilterCharacteristics || [];
+    V.Dynamicest.Settings.FilterTraits = V.Dynamicest.Settings.FilterTraits || ["防晒霜"];
+
+    V.Dynamicest.DynamicestDisplayTop = V.Dynamicest.Settings.DynamicestDisplayTop || 10;
+    Dynamicest.settingDynamicestDisplayTop();
+
+    V.Dynamicest.Avatar = true;
+    V.Dynamicest.AvatarScale = V.Dynamicest.AvatarScale || 1;
+    V.Dynamicest.AvatarShowBorder = V.Dynamicest.AvatarShowBorder || false;
+    V.Dynamicest.AvatarZ = V.Dynamicest.AvatarZ || 299;
+    V.Dynamicest.AvatarX = V.Dynamicest.AvatarX || -100;
+    V.Dynamicest.AvatarY = V.Dynamicest.AvatarY || -100;
+    V.Dynamicest.AvatarStoryBottom = V.Dynamicest.AvatarStoryBottom || 100;
+    Dynamicest.settingStoryBottom();
+    V.Dynamicest.Locked = V.Dynamicest.Locked || false;
+
+    // 不允许首页出现，因为会导致首次判断出错
     if (V.passage === "Start") return;
     Dynamicest.ev = ev;
     Dynamicest.DisplayFold = {};
     Dynamicest.DisplayFoldClose = false;
+
     queueMicrotask(() => {
+        Dynamicest.LoadStats();
+        Dynamicest.LoadAvatar();
+        Dynamicest.LoadMoney();
+
         const runTask = (task) => {
             return new Promise(resolve => {
                 requestAnimationFrame(() => {
@@ -30,9 +59,7 @@ Dynamicest.onPassageRender = function (ev) {
             });
         };
         
-        runTask(() => Dynamicest.LoadMoney())
-            .then(() => runTask(() => Dynamicest.LoadStats()))
-            .then(() => runTask(() => Dynamicest.LoadSocial()))
+        runTask(() => runTask(() => Dynamicest.LoadSocial()))
             .then(() => runTask(() => Dynamicest.LoadCharacteristics()))
             .then(() => runTask(() => Dynamicest.LoadTrait()))
             .then(() => runTask(() => {
@@ -335,9 +362,18 @@ Dynamicest.LoadSocial = function() {
         let relation_title = relation_box.querySelector(".relation-top-line > .relation-name")?.innerText.trim();
         const relation_class_id = relation_box.parentElement?.id;  // 这个键若为null，则在之后单独分组，但在display中为同一组
 
-        if (relation_class_id === "global-recognition") relation_title = relation_box.querySelector(".relation-description").childNodes[0].textContent.trim().replace('：', '');  // 单独适配知名度
+        if (relation_class_id === "global-recognition") {
+            const isTotleFameContainer = relation_box.matches(':nth-child(12n)');
+            const fullText = relation_box.querySelector(".relation-description").textContent;
+            if (isTotleFameContainer) {
+                relation_title = "总体名声";
+            } else {
+                const match = fullText.match(/\s*([^\s：]+)/);
+                relation_title = match ? match[1] : '';
+            }
+        }  // 单独适配知名度
 
-        if (relation_title) {  // 有Title，才有键，才可以动态查询修改
+        if (relation_title && !V.Dynamicest.Settings.FilterRelations.includes(relation_title)) {  // 有Title，才有键，才可以动态查询修改
             const LastRelation = Dynamicest.LastRelations[relation_title];
             if (LastRelation) {
                 if (LastRelation.innerText !== relation_box.innerText) {  // 有改动，动态展示，否则不变
@@ -387,7 +423,7 @@ Dynamicest.LoadCharacteristics = function() {
             .filter(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '')
             .map(node => node.textContent.trim())
             .join('');
-        if (characteristic_title) {  // 有Title，才有键，才可以动态查询修改
+        if (characteristic_title && !V.Dynamicest.Settings.FilterCharacteristics.includes(characteristic_title)) {  // 有Title，才有键，才可以动态查询修改
             const LastCharacteristic = Dynamicest.LastCharacteristics[characteristic_title];
             let characteristic_class_id = characteristic_box.parentElement?.id;  // 这个键若为null，则在之后单独分组，但在display中为同一组
             let content_changed = LastCharacteristic?.innerText !== characteristic_box?.innerText;
@@ -437,7 +473,7 @@ Dynamicest.LoadTrait = function() {
         const trait_title = trait_box.querySelector("span")?.innerText.trim();
         const trait_class_id = trait_box.parentElement?.parentElement?.querySelector(".traitHeading")?.innerText.trim();  // 这个键若为null，则在之后单独分组，但在display中为同一组
 
-        if (trait_title) {  // 有Title，才有键，才可以动态查询修改
+        if (trait_title && !V.Dynamicest.Settings.FilterTraits.includes(trait_title)) {  // 有Title，才有键，才可以动态查询修改
             const LastTrait = Dynamicest.LastTraits[trait_title];
             if (LastTrait) {
                 if (LastTrait.innerText !== trait_box.innerText) {  // 有改动，动态展示，否则不变
@@ -515,16 +551,346 @@ Dynamicest.UnfoldDisplay = function() {
 };
 
 
-// === 头像（废弃） =============================
+// === 头像 ====================================
 Dynamicest.LoadAvatar = function() {
-    const div_avatar = document.createElement("div")
-    div_avatar.id = "avatar-container"
-    console.log(div_avatar);
-    
-    div_avatar.className = "avatar"
-    document.querySelector('#story').append(div_avatar)
+    // 获取原始画布
+    if (!Dynamicest.sourceCanvas) {
+        Dynamicest.sourceCanvas = document.querySelector(".mainCanvas");
+    }
 
-    const canvas = document.createElement("canvas")
-    canvas.id = "avatar"
-    div_avatar.append("canvas")
+    // 如果容器已存在，只更新配置
+    if (Dynamicest.AvatarContainer) {
+        this.updateAvatarConfig();
+        return;
+    }
+
+    // 创建头像容器
+    Dynamicest.AvatarContainer = document.createElement("div");
+    Dynamicest.AvatarContainer.id = "avatar-container";
+    Dynamicest.AvatarContainer.className = "avatar";
+    Dynamicest.AvatarContainer.style.zIndex = V.Dynamicest.AvatarZ;
+    Dynamicest.AvatarContainer.style.left = V.Dynamicest.AvatarX + "px";
+    Dynamicest.AvatarContainer.style.bottom = V.Dynamicest.AvatarY + "px";
+    document.querySelector('#story').append(Dynamicest.AvatarContainer);
+
+    // 创建头像画布
+    Dynamicest.AvatarCanvas = document.createElement("canvas");
+    Dynamicest.AvatarCanvas.id = "avatar";
+    Dynamicest.updateCanvasSize();
+    Dynamicest.AvatarContainer.append(Dynamicest.AvatarCanvas);
+
+    // 创建拖拽手柄
+    Dynamicest.AvatarHandle = document.createElement("div");
+    Dynamicest.AvatarHandle.id = "avatar-move";
+    Dynamicest.AvatarHandle.style.inset = "14px 22px 79px 75px";
+    Dynamicest.AvatarHandle.style.cursor = "move";
+    Dynamicest.AvatarHandle.style.touchAction = "none";
+    if (V.Dynamicest.Locked) Dynamicest.AvatarHandle.style.pointer_events = "none";
+    Dynamicest.updateBorderDisplay();
+    Dynamicest.AvatarContainer.append(Dynamicest.AvatarHandle);
+
+    // 启动同步和拖拽
+    Dynamicest.startSync();
+    new DraggableAvatar();
 };
+
+Dynamicest.updateCanvasSize = function() {
+    if (!Dynamicest.sourceCanvas || !Dynamicest.AvatarCanvas) return;
+    Dynamicest.AvatarCanvas.width = Dynamicest.sourceCanvas.width * V.Dynamicest.AvatarScale;
+    Dynamicest.AvatarCanvas.height = Dynamicest.sourceCanvas.height * V.Dynamicest.AvatarScale;
+};
+
+Dynamicest.updateBorderDisplay = function() {
+    if (!Dynamicest.AvatarHandle) return;
+    if (V.Dynamicest.AvatarShowBorder) {
+        Dynamicest.AvatarHandle.style.border = "1px solid aqua";
+    } else {
+        Dynamicest.AvatarHandle.style.border = "none";
+    }
+};
+
+Dynamicest.updateAvatarConfig = function() {
+    if (!Dynamicest.AvatarContainer) return;
+    Dynamicest.AvatarContainer.style.display = V.Dynamicest.Avatar ? "": "none"
+    Dynamicest.AvatarContainer.style.zIndex = `${V.Dynamicest.AvatarZ}`;
+    Dynamicest.AvatarContainer.style.left =  V.Dynamicest.AvatarX + "px";
+    Dynamicest.AvatarContainer.style.bottom = V.Dynamicest.AvatarY + "px";
+    Dynamicest.updateCanvasSize();
+    Dynamicest.updateBorderDisplay();
+};
+
+Dynamicest.startSync = function() {
+    function sync() {
+        if (!Dynamicest.sourceCanvas || !Dynamicest.AvatarCanvas) return;
+        
+        const ctx = Dynamicest.AvatarCanvas.getContext('2d');
+        ctx.clearRect(0, 0, Dynamicest.AvatarCanvas.width, Dynamicest.AvatarCanvas.height);
+        ctx.drawImage(
+            Dynamicest.sourceCanvas,
+            0, 0,
+            Dynamicest.sourceCanvas.width, Dynamicest.sourceCanvas.height,
+            0, 0,
+            Dynamicest.AvatarCanvas.width, Dynamicest.AvatarCanvas.height
+        );
+        
+        Dynamicest.syncId = requestAnimationFrame(sync);
+    }
+    
+    // 取消之前的同步
+    if (Dynamicest.syncId) {
+        cancelAnimationFrame(Dynamicest.syncId);
+    }
+    
+    Dynamicest.syncId = requestAnimationFrame(sync);
+};
+
+Dynamicest.stopSync = function() {
+    if (Dynamicest.syncId) {
+        cancelAnimationFrame(Dynamicest.syncId);
+        Dynamicest.syncId = null;
+    }
+};
+
+class DraggableAvatar {
+    constructor() {
+        this.container = Dynamicest.AvatarContainer;
+        this.handle = Dynamicest.AvatarHandle;
+        this.isDragging = false;
+        this.startPos = { x: 0, y: 0 };
+        this.initialPos = { left: 0, bottom: 0 };
+        
+        this.init();
+    }
+    
+    init() {
+        this.bindEvents();
+    }
+    
+    bindEvents() {
+        const handle = this.handle;
+        
+        // 鼠标事件
+        handle.addEventListener('mousedown', this);
+        document.addEventListener('mousemove', this);
+        document.addEventListener('mouseup', this);
+        
+        // 触摸事件
+        handle.addEventListener('touchstart', this, { passive: false });
+        document.addEventListener('touchmove', this, { passive: false });
+        document.addEventListener('touchend', this);
+        document.addEventListener('touchcancel', this);
+        
+        // 阻止拖拽默认行为
+        handle.addEventListener('dragstart', (e) => e.preventDefault());
+    }
+    
+    // 事件处理
+    handleEvent(e) {
+        switch(e.type) {
+            case 'mousedown':
+            case 'touchstart':
+                this.onDragStart(e);
+                break;
+            case 'mousemove':
+            case 'touchmove':
+                this.onDragMove(e);
+                break;
+            case 'mouseup':
+            case 'touchend':
+            case 'touchcancel':
+                this.onDragEnd(e);
+                break;
+        }
+    }
+    
+    getClientPos(e) {
+        if (e.type.startsWith('touch')) {
+            return {
+                x: e.touches[0].clientX,
+                y: e.touches[0].clientY
+            };
+        }
+        return {
+            x: e.clientX,
+            y: e.clientY
+        };
+    }
+    
+    onDragStart(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const pos = this.getClientPos(e);
+        const rect = this.container.getBoundingClientRect();
+        
+        this.isDragging = true;
+        this.startPos = { x: pos.x, y: pos.y };
+        const currentLeft = parseFloat(this.container.style.left) || rect.left;
+        const currentBottom = parseFloat(this.container.style.bottom) || (window.innerHeight - rect.bottom);
+        
+        this.initialPos = { 
+            left: currentLeft, 
+            bottom: currentBottom 
+        };
+        
+        this.handle.style.cursor = 'grabbing';
+    }
+    
+    onDragMove(e) {
+        if (!this.isDragging) return;
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const pos = this.getClientPos(e);
+        const dx = pos.x - this.startPos.x;
+        const dy = pos.y - this.startPos.y;
+        
+        // 计算新位置
+        let newLeft = this.initialPos.left + dx;
+        let newBottom = this.initialPos.bottom - dy;
+        
+        // 应用新位置
+        this.container.style.left = newLeft + 'px';
+        this.container.style.bottom = newBottom + 'px';
+        this.container.style.top = 'auto';
+        this.container.style.right = 'auto';
+    }
+    
+    onDragEnd(e) {
+        if (!this.isDragging) return;
+        
+        this.isDragging = false;
+        this.handle.style.cursor = 'move';
+        
+        // 保存位置到存档变量
+        const rect = this.container.getBoundingClientRect();
+        V.Dynamicest.AvatarX = Math.round(rect.left);
+        V.Dynamicest.AvatarY = Math.round(window.innerHeight - rect.bottom);
+    }
+}
+
+
+// === 设置 ====================================
+Dynamicest.settingFilter = function(slot, key, checked) {
+    console.log(slot, key, checked);
+    
+    let obj = {}
+    switch (slot) {
+        case "Characteristics":
+            obj = V.Dynamicest.Settings.FilterCharacteristics
+            break;
+        case "Relations":
+            obj = V.Dynamicest.Settings.FilterRelations
+            break;
+        case "Traits":
+            obj = V.Dynamicest.Settings.FilterTraits
+            break;
+        default:
+            break;
+    };
+
+    if (checked) {
+        obj.push(key);
+    } else {
+        V.Dynamicest.Settings[`Filter${slot}`] = obj.filter(i => i != key);
+    };
+}
+Dynamicest.getFilterOptions = function(slot) {
+    let obj1 = {}
+    let obj2 = {}
+    switch (slot) {
+        case "Characteristics":
+            obj1 = V.Dynamicest.Settings.FilterCharacteristics;
+            obj2 = Dynamicest.LastCharacteristics;
+            break;
+        case "Relations":
+            obj1 = V.Dynamicest.Settings.FilterRelations;
+            obj2 = Dynamicest.LastRelations;
+            break;
+        case "Traits":
+            obj1 = V.Dynamicest.Settings.FilterTraits;
+            obj2 = Dynamicest.LastTraits;
+            break;
+        default:
+            break;
+    };
+
+    return [...new Set([...obj1, ...Object.keys(obj2)])];
+}
+Dynamicest.getFilter = function(slot, key) {
+    let obj = {}
+    switch (slot) {
+        case "Characteristics":
+            obj = V.Dynamicest.Settings.FilterCharacteristics
+            break;
+        case "Relations":
+            obj = V.Dynamicest.Settings.FilterRelations
+            break;
+        case "Traits":
+            obj = V.Dynamicest.Settings.FilterTraits
+            break;
+        default:
+            break;
+    };
+
+    return obj.includes(key) ? " checked" : "";
+};
+
+Dynamicest.settingDynamicestDisplayTop = function(a0) {
+    if (a0) {
+        V.Dynamicest.DynamicestDisplayTop = a0;
+        document.getElementById("numberslider-input-dynamicestdisplaytop").value = a0;
+        document.getElementById("numberslider-value-dynamicestdisplaytop").innerText = a0;
+    }
+    document.documentElement.style.setProperty('--dynamicest-display-top', `${V.Dynamicest.DynamicestDisplayTop}px`);
+};
+
+Dynamicest.settingAvatarEnable = function(a0) {
+    V.Dynamicest.Avatar = a0;
+    Dynamicest.updateAvatarConfig();
+    if (a0) {
+        Dynamicest.startSync();
+    } else {
+        Dynamicest.stopSync();
+    }
+};
+Dynamicest.settingAvatarShowBorder = function(a0) {
+    V.Dynamicest.AvatarShowBorder = a0;
+    Dynamicest.updateBorderDisplay();
+};
+Dynamicest.settingResetPos = function() {
+    V.Dynamicest.AvatarX = -100;
+    V.Dynamicest.AvatarY = -100;
+    Dynamicest.updateAvatarConfig();
+};
+Dynamicest.settingLock = function(a0) {
+    V.Dynamicest.Locked = a0
+    if (V.Dynamicest.Locked) {
+        Dynamicest.AvatarHandle.style.pointerEvents = "none";
+    } else {
+        Dynamicest.AvatarHandle.style.pointerEvents = "";
+    }
+};
+Dynamicest.settingAvatarScale = function(a0) {
+    if (a0) {
+        V.Dynamicest.AvatarScale = a0;
+        document.getElementById("numberslider-input-dynamicestavatarscale").value = a0;
+        document.getElementById("numberslider-value-dynamicestavatarscale").innerText = a0;
+    }
+    Dynamicest.updateCanvasSize();
+};
+Dynamicest.settingStoryBottom = function(a0) {
+    if (a0) {
+        V.Dynamicest.AvatarStoryBottom = a0;
+        document.getElementById("numberslider-input-dynamicestavatarstorybottom").value = a0;
+        document.getElementById("numberslider-value-dynamicestavatarstorybottom").innerText = a0;
+    }
+    document.documentElement.style.setProperty('--story-bottom', `${V.Dynamicest.AvatarStoryBottom}px`);
+};
+
+
+`V.Dynamicest.AvatarScale = V.Dynamicest.AvatarScale || 1.2;
+    V.Dynamicest.AvatarZ = V.Dynamicest.AvatarZ || 299;
+    V.Dynamicest.AvatarX = V.Dynamicest.AvatarX || -100;
+    V.Dynamicest.AvatarY = V.Dynamicest.AvatarY || -100;`
